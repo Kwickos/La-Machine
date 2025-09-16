@@ -54,11 +54,12 @@ export async function execute(
                        settings.briefChannelId || 
                        interaction.channelId;
 
-      try {
-        const brief = await briefManager.createBrief(channelId, durationHours);
+      const brief = await briefManager.createBrief(channelId, durationHours);
+      
+      if (brief) {
         await interaction.editReply(`✅ **New brief created!**\n\n**Company:** ${brief.companyName}\n**ID:** \`${brief.id}\``);
-      } catch (error) {
-        await interaction.editReply('❌ Error creating the brief.');
+      } else {
+        await interaction.editReply('❌ Error creating the brief. The administrator has been notified.');
       }
       break;
     }

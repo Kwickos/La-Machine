@@ -2,16 +2,63 @@ import { Client, TextChannel, EmbedBuilder } from 'discord.js';
 import { Brief } from '../../types/index.js';
 import { generateBrief } from '../ai/BriefGenerator.js';
 import { logger } from '../../utils/logger.js';
+import { sendAdminAlert } from '../../utils/alerts.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class BriefManager {
   private activeBriefs: Map<string, Brief> = new Map();
   private client: Client;
+  private readonly briefsFilePath: string = path.join(process.cwd(), 'data', 'active-briefs.json');
 
   constructor(client: Client) {
     this.client = client;
+    this.ensureDataDirectory();
+    this.loadActiveBriefs();
   }
 
-  async createBrief(channelId: string, durationHours: number = 48): Promise<Brief> {
+  private ensureDataDirectory(): void {
+    const dataDir = path.dirname(this.briefsFilePath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+      logger.info('Created data directory');
+    }
+  }
+
+  private loadActiveBriefs(): void {
+    try {
+      if (fs.existsSync(this.briefsFilePath)) {
+        const data = fs.readFileSync(this.briefsFilePath, 'utf8');
+        const briefsData = JSON.parse(data);
+        
+        for (const briefData of briefsData) {
+          // Convert date strings back to Date objects
+          const brief: Brief = {
+            ...briefData,
+            deadline: new Date(briefData.deadline),
+            createdAt: new Date(briefData.createdAt)
+          };
+          this.activeBriefs.set(brief.id, brief);
+        }
+        
+        logger.info(`Loaded ${briefsData.length} active briefs from storage`);
+      }
+    } catch (error) {
+      logger.error('Error loading active briefs:', error);
+    }
+  }
+
+  private saveActiveBriefs(): void {
+    try {
+      const briefsArray = Array.from(this.activeBriefs.values());
+      fs.writeFileSync(this.briefsFilePath, JSON.stringify(briefsArray, null, 2));
+      logger.debug(`Saved ${briefsArray.length} active briefs to storage`);
+    } catch (error) {
+      logger.error('Error saving active briefs:', error);
+    }
+  }
+
+  async createBrief(channelId: string, durationHours: number = 48): Promise<Brief | null> {
     try {
       const briefData = await generateBrief();
       
@@ -37,12 +84,21 @@ export class BriefManager {
       }
 
       this.activeBriefs.set(brief.id, brief);
+      this.saveActiveBriefs();
       logger.info(`Brief created: ${brief.id}`);
       
       return brief;
     } catch (error) {
       logger.error('Error creating brief:', error);
-      throw error;
+      
+      // Send alert to admin instead of using fallback
+      await sendAdminAlert(
+        this.client,
+        `Erreur lors de la génération d'un brief pour le channel <#${channelId}>.\n\nLe bot n'a pas pu créer de brief automatique. Vérifiez la configuration OpenAI.`,
+        error
+      );
+      
+      return null;
     }
   }
 
@@ -93,6 +149,7 @@ export class BriefManager {
 
     brief.status = 'completed';
     this.activeBriefs.delete(briefId);
+    this.saveActiveBriefs();
     logger.info(`Brief completed: ${briefId}`);
   }
 
@@ -103,5 +160,25 @@ export class BriefManager {
   getExpiredBriefs(): Brief[] {
     const now = new Date();
     return this.getActiveBriefs().filter(brief => brief.deadline < now);
+  }
+
+  async cancelBrief(briefId: string): Promise<void> {
+    const brief = this.activeBriefs.get(briefId);
+    if (!brief) {
+      throw new Error(`Brief ${briefId} not found`);
+    }
+
+    brief.status = 'cancelled';
+    this.activeBriefs.delete(briefId);
+    this.saveActiveBriefs();
+    logger.info(`Brief cancelled: ${briefId}`);
+  }
+
+  getBriefById(briefId: string): Brief | undefined {
+    return this.activeBriefs.get(briefId);
+  }
+
+  getAllBriefs(): Brief[] {
+    return Array.from(this.activeBriefs.values());
   }
 }
