@@ -67,6 +67,18 @@ client.once('ready', async () => {
   // Load server configurations
   await configManager.loadSettings();
   
+  // Log restored briefs count
+  const activeBriefs = briefManager.getActiveBriefs();
+  if (activeBriefs.length > 0) {
+    logger.info(`Restored ${activeBriefs.length} active briefs from previous session`);
+    
+    // Check for any briefs that might have expired during downtime
+    const expiredBriefs = briefManager.getExpiredBriefs();
+    if (expiredBriefs.length > 0) {
+      logger.info(`Found ${expiredBriefs.length} briefs that expired during downtime`);
+    }
+  }
+  
   // Start the scheduler
   briefScheduler = new BriefScheduler(briefManager, configManager);
   briefScheduler.start();
@@ -108,6 +120,13 @@ process.on('SIGINT', () => {
   if (briefScheduler) {
     briefScheduler.stop();
   }
+  
+  // Save current state before shutdown
+  const activeBriefs = briefManager.getActiveBriefs();
+  if (activeBriefs.length > 0) {
+    logger.info(`Saving ${activeBriefs.length} active briefs before shutdown`);
+  }
+  
   client.destroy();
   process.exit(0);
 });

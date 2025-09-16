@@ -51,11 +51,16 @@ export class BriefScheduler {
           .find(s => s.briefChannelId === brief.channelId);
         
         if (settings?.autoGenerateBriefs) {
-          await this.briefManager.createBrief(
+          const newBrief = await this.briefManager.createBrief(
             brief.channelId,
             settings.briefDurationHours
           );
-          logger.info(`Auto-generated new brief for channel ${brief.channelId}`);
+          
+          if (newBrief) {
+            logger.info(`Auto-generated new brief for channel ${brief.channelId}`);
+          } else {
+            logger.error(`Failed to auto-generate brief for channel ${brief.channelId}`);
+          }
         }
       }
     } catch (error) {
@@ -74,11 +79,16 @@ export class BriefScheduler {
             .filter(b => b.channelId === serverSettings.briefChannelId);
           
           if (activeBriefs.length === 0) {
-            await this.briefManager.createBrief(
+            const newBrief = await this.briefManager.createBrief(
               serverSettings.briefChannelId,
               serverSettings.briefDurationHours
             );
-            logger.info(`Daily brief generated for server ${serverSettings.guildId}`);
+            
+            if (newBrief) {
+              logger.info(`Daily brief generated for server ${serverSettings.guildId}`);
+            } else {
+              logger.error(`Failed to generate daily brief for server ${serverSettings.guildId}`);
+            }
           }
         }
       }
@@ -96,7 +106,10 @@ export class BriefScheduler {
     }
     
     const task = cron.schedule(cronExpression, async () => {
-      await this.briefManager.createBrief(channelId, durationHours);
+      const newBrief = await this.briefManager.createBrief(channelId, durationHours);
+      if (!newBrief) {
+        logger.error(`Failed to create custom scheduled brief for channel ${channelId}`);
+      }
     });
     
     this.scheduledTasks.set(taskId, task);

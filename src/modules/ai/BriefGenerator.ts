@@ -88,29 +88,6 @@ export async function generateBrief(language: 'fr' | 'en' = 'fr'): Promise<Gener
     return brief;
   } catch (error) {
     logger.error('Error generating brief:', error);
-    
-    // Fallback brief in case of error
-    const fallbackBriefs = [
-      {
-        companyName: "Café Nuage",
-        companyDescription: "Nous sommes un petit café artisanal qui torréfie son propre café. Notre produit se distingue par sa **qualité supérieure** et son processus de torréfaction unique. Notre audience cible est les **amateurs de café exigeants**. Nous voulons transmettre une ambiance **chaleureuse et authentique**.",
-        jobDescription: "Vous devez créer un nouveau **packaging** pour notre café signature. Nous voulons un design **minimaliste** qui met en valeur l'artisanat. Utilisez des **tons terre** et notre couleur principale qui est le **marron foncé**. Assurez-vous que le nom du produit soit bien visible.",
-        deadline: "5 jours"
-      },
-      {
-        companyName: "TechVert",
-        companyDescription: "Nous sommes une startup qui développe des **solutions technologiques écologiques**. Notre produit principal est une application de suivi carbone. Notre audience cible est les **entreprises soucieuses de l'environnement**. Nous voulons transmettre **innovation et responsabilité**.",
-        jobDescription: "Créez une **affiche promotionnelle** pour notre nouvelle application. Le design doit être **moderne et épuré** avec des éléments naturels. Utilisez du **vert et du blanc** comme couleurs principales. Incluez notre slogan et des visuels représentant la technologie et la nature.",
-        deadline: "7 jours"
-      },
-      {
-        companyName: "Atelier Lumière",
-        companyDescription: "Nous sommes un studio de design d'intérieur spécialisé dans **l'éclairage**. Nos créations se distinguent par leur **élégance et leur fonctionnalité**. Notre clientèle est **haut de gamme**. Nous voulons véhiculer **luxe et innovation**.",
-        jobDescription: "Concevez une nouvelle **identité visuelle complète** pour notre studio. Nous recherchons un style **sophistiqué et contemporain**. Les couleurs doivent évoquer la lumière : **or, blanc, et noir**. Le logo doit être **adaptable** à différents supports.",
-        deadline: "10 jours"
-      }
-    ];
-    
-    return fallbackBriefs[Math.floor(Math.random() * fallbackBriefs.length)];
+    throw error;
   }
 }
