@@ -7,6 +7,8 @@ import { initializeOpenAI } from './modules/ai/BriefGenerator.js';
 import { logger } from './utils/logger.js';
 import * as briefCommand from './commands/brief.js';
 import * as configCommand from './commands/config.js';
+import { startFullServer } from './web/fullServer.js';
+import { setDiscordClient } from './web/services/discordService.js';
 
 dotenv.config();
 
@@ -85,6 +87,18 @@ client.once('ready', async () => {
   
   // Deploy slash commands
   await deployCommands();
+  
+  // Start web dashboard if enabled
+  if (process.env.ENABLE_WEB_DASHBOARD === 'true') {
+    try {
+      // Set Discord client BEFORE starting web server
+      setDiscordClient(client);
+      await startFullServer();
+      logger.info('Web dashboard started and connected to Discord bot');
+    } catch (error) {
+      logger.error('Failed to start web dashboard:', error);
+    }
+  }
 });
 
 client.on('interactionCreate', async interaction => {
